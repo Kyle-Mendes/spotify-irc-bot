@@ -99,7 +99,6 @@ while 1: #Starting to listen
   if ircmsg.find(' PRIVMSG ')!=-1:
      nick=ircmsg.split('!')[0][1:]
      channel=ircmsg.split(' PRIVMSG ')[-1].split(' :')[0]
-     commands(nick,channel,ircmsg)
   
 
             ###################
