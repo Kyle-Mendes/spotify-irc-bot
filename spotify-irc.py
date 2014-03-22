@@ -1,3 +1,9 @@
+## add a !mute function
+## add a !100  function to set volume to 100
+## !register <command> <uri>
+
+
+
 # Import some necessary libraries.
 import socket
 import subprocess
@@ -112,19 +118,19 @@ while 1: #Starting to listen
     pause()
   if ircmsg.find(":!stop") != -1: #sends the stop command
     stop()
-  if ircmsg.find(":!next") != -1: #add an "or !skip" 
+  if ircmsg.find(":!next") != -1 or ircmsg.find(":!skip") != -1: #jumps to the next song
     next()
-  if ircmsg.find(":!prev") != -1: #add an "or !last" 
+  if ircmsg.find(":!prev") != -1 or ircmsg.find(":!previous") != -1 or ircmsg.find(":!skip") != -1: #jump back to the previous song
     previous()
   if ircmsg.find(":!shuffle") != -1: #Tells spotify to toggle shuffle
     shuffle()
   if ircmsg.find(":!repeat") != -1: #Tells spotify to toggle repeat
     shuffle()
   if ircmsg.find(":!volume") != -1: #Sets the volume to be equal to the number passed in the command 
-	volume(ircmsg)
-  if ircmsg.find(":!help") != -1: #add an "or !list"  #lists all commands (currently hard coded...)
+	volume(ircmsg) 
+  if ircmsg.find(":!help") != -1: #lists all commands (currently hard coded...)
     help()
-  if ircmsg.find(":!info") != -1: #add an "or !list"  #lists all commands (currently hard coded...)
+  if ircmsg.find(":!info") != -1: #lists all information about the current song
     info()
 
             #######################
