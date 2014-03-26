@@ -8,12 +8,17 @@
 import socket
 import subprocess
 import re
+import cPickle as pickle
 
+# Importing the list of registered commands
+with open('dict.pickle', 'rb') as handle:
+  params = pickle.load(handle)
 
 # Some basic variables used to configure the bot        
 server = "irc.freenode.net" # Server
 channel = "#<channel>" # Channel
 botnick = "Spot-Bot" # Your bots nick
+uri = ""
 
 spotify = "osascript /path/to/SpotifyControl.scpt"
 
@@ -30,15 +35,20 @@ def hello(): # This function responds to a user that inputs "Hello <botnick>"
   ircsock.send("PRIVMSG "+ channel +" :Hello!\n")
 
 def help():  #The help command.  This can probably be cleaned up...
-	ircsock.send("PRIVMSG "+ channel +" :The currently supported commands are...\n")
-	ircsock.send("PRIVMSG "+ channel +" :!play           Tells spotify to play.  Accepts arguments in the form of spotify urls/uris\n")
-	ircsock.send("PRIVMSG "+ channel +" :!stop           Stops the music\n")
-	ircsock.send("PRIVMSG "+ channel +" :!pause          Pauses the music\n")
-	ircsock.send("PRIVMSG "+ channel +" :!next & !skip   Plays the next song\n")
-	ircsock.send("PRIVMSG "+ channel +" :!prev & !last   Plays the next song\n")
-	ircsock.send("PRIVMSG "+ channel +" :!shuffle        Toggles shuffle on and off\n")
-	ircsock.send("PRIVMSG "+ channel +" :!repeat         Toggles repeat on and off\n")
-	ircsock.send("PRIVMSG "+ channel +" :!volume N       Changes the volume.  N is substituted with a number (1 - 100)\n")
+  ircsock.send("PRIVMSG "+ channel +" :The currently supported commands are...\n")
+  ircsock.send("PRIVMSG "+ channel +" :!play           Tells spotify to play.  Accepts arguments in the form of spotify urls/uris\n")
+  ircsock.send("PRIVMSG "+ channel +" :!stop           Stops the music\n")
+  ircsock.send("PRIVMSG "+ channel +" :!pause          Pauses the music\n")
+  ircsock.send("PRIVMSG "+ channel +" :!next & !skip   Plays the next song\n")
+  ircsock.send("PRIVMSG "+ channel +" :!prev & !last   Plays the next song\n")
+  ircsock.send("PRIVMSG "+ channel +" :!shuffle        Toggles shuffle on and off\n")
+  ircsock.send("PRIVMSG "+ channel +" :!repeat         Toggles repeat on and off\n")
+  ircsock.send("PRIVMSG "+ channel +" :!volume N       Changes the volume.  N is substituted with a number (1 - 100)\n")
+  ircsock.send("PRIVMSG "+ channel +" :" + line + "\n")
+  ircsock.send("PRIVMSG "+ channel +" :!register <alias> <uri>   Allows you to register an alias.  Both arguments are needed.\n")
+  ircsock.send("PRIVMSG "+ channel +" :~<alias>        Plays the uri asscoiated with a register alias.  Please note it uses '~' rather that '!'\n")
+  ircsock.send("PRIVMSG "+ channel +" :!aliases:       Lists all registered aliases.\n")
+
 def play(n):  #Sends the play command.  Accepts arguments 
 	if re.search( r'!play *\w', n):
 		null, song = n.split(':!play ', 1 )
@@ -59,7 +69,8 @@ def previous():
 	subprocess.call(spotify + " previous", shell=True)
 
 def shuffle():
-	subprocess.call(spotify + " shuffle", shell=True)
+	shuffle = subprocess.Popen(spotify + " shuffle", shell=True, stdout=subprocess.PIPE ).communicate()[0]
+  ircsock.send("PRIVMSG "+ channel +" :" + shuffle + "\n")
 
 def repeat():
 	subprocess.call(spotify + " repeat", shell=True)
@@ -70,6 +81,45 @@ def volume(n):  #Changes the volume.  Accepts arguments.  Want to add a "volume+
 		subprocess.call(spotify + " volume " + level, shell=True)
 	else:
 		ircsock.send("PRIVMSG "+ channel +" :Volume requires a numeric input.  Type !help for more information.\n")
+
+            ###################
+            ##   !REGISTER   ##
+            ###################
+
+def register(n):
+  if re.search( r'!register *\w', n):
+    null, holder = n.split("PRIVMSG " + channel + " ", 1)
+    null, alias, uri = holder.split(" ", 2)
+    for item in params:
+        if item == alias:
+            ircsock.send("PRIVMSG "+ channel +" :" + alias + " is already registered\n")
+            break
+    else: 
+      params[alias] = uri
+      ircsock.send("PRIVMSG "+ channel +" :" + alias + " " + uri + " was registered!\n")
+      with open('dict.pickle', 'wb') as handle:
+        pickle.dump(params, handle)
+
+#playing things that are registered
+def alias(n):
+  null, alias = n.split(":~", 1)
+  for item in params:
+    if item == alias:
+      subprocess.call(spotify + " play " + params[alias], shell=True)
+      break
+  else:
+    ircsock.send("PRIVMSG "+ channel +" :" + alias + " was not found...  You should register it!\n")
+
+def aliases():
+  ircsock.send("PRIVMSG "+ channel +" :Currently registered aliases:\n")
+  for item in params:
+    ircsock.send("PRIVMSG "+ channel +" :" + item + "\n")
+
+            #####################
+            ##  END !REGISTER  ##
+            #####################
+
+
 
 def info(): #Posts all of the spotify information about the current song
   info = subprocess.Popen(spotify + " info", shell=True, stdout=subprocess.PIPE ).communicate()[0]
@@ -105,7 +155,7 @@ while 1: #Starting to listen
   if ircmsg.find(' PRIVMSG ')!=-1:
      nick=ircmsg.split('!')[0][1:]
      channel=ircmsg.split(' PRIVMSG ')[-1].split(' :')[0]
-  
+
 
             ###################
             ## USER COMMANDS ##
@@ -132,6 +182,12 @@ while 1: #Starting to listen
     help()
   if ircmsg.find(":!info") != -1: #lists all information about the current song
     info()
+  if ircmsg.find(":!register") != -1: #Allowing users to register aliases
+    register(ircmsg)
+  if ircmsg.find(":!aliases") != -1: #list all registered aliases
+    aliases()
+  if ircmsg.find(":~") != -1:
+    alias(ircmsg)
 
             #######################
             ## AUTO TRACK UPDATE ##
